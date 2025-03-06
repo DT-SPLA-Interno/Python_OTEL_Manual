@@ -15,16 +15,7 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
 
-# Logs import
-from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
-from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
-from opentelemetry._logs import set_logger_provider
-
-
-
-
 app = FastAPI(title="API Inventario", version="1.0.0")
-
 # ------------------------------------------------------------------------------
 # 1. Enriquecimiento con Dynatrace
 # ------------------------------------------------------------------------------
@@ -50,8 +41,6 @@ enrich_attrs.update({
   "service.version": "1.0.0", #TODO Replace with the version of your application
 })
 
-
-
 resource = Resource.create(enrich_attrs)
 
 # ------------------------------------------------------------------------------
@@ -62,7 +51,7 @@ tracer_provider = TracerProvider(resource=resource)
 trace.set_tracer_provider(tracer_provider)
 
 otlp_exporter = OTLPSpanExporter(
-    endpoint="http://collector/v1/traces" # COLLECTOR
+    endpoint="http://collector:4318/v1/traces" 
 )
 
 span_processor = BatchSpanProcessor(otlp_exporter)
@@ -78,21 +67,17 @@ def get_db_connection():
     Ajusta parámetros si es necesario (host, user, password, database).
     """
     return mysql.connector.connect(
-        host=os.getenv("DB_HOST", ""), #DATABASE
-        user=os.getenv("DB_USER", "root"), #USER
-        password=os.getenv("DB_PASSWORD", ""), # PASSWORD
+        host=os.getenv("DB_HOST", "BASE DE DATOS"),
+        user=os.getenv("DB_USER", "root"),
+        password=os.getenv("DB_PASSWORD", "######"),
         database=os.getenv("DB_DATABASE", "inventario")
     )
-
-    
+  
 # ------------------------------------------------------------------------------
 # 4. Obtener la traza
 # ------------------------------------------------------------------------------
 
 tracer = trace.get_tracer_provider().get_tracer("api-inventario")
-
-
-
 
 # ------------------------------------------------------------------------------
 # 5. Endpoints
@@ -108,7 +93,6 @@ def add_item(request: Request, data: Dict[str, Any]):
     # Extraer el contexto de trazas de los encabezados HTTP
     context = extract(request.headers)
     tracer = trace.get_tracer(__name__)
-    #with tracer.start_as_current_span("Post /items/add", kind=SpanKind.SERVER) as span:
     with tracer.start_as_current_span("Post /items/add", context=context) as span:
         name = data.get("name")
         quantity = data.get("quantity")
@@ -134,14 +118,16 @@ def add_item(request: Request, data: Dict[str, Any]):
             raise HTTPException(status_code=500, detail="Error interno al agregar item")
 
 @app.get("/items/all")
-def get_all_items():
+def get_all_items(request: Request):
     """
     Retorna todos los ítems del inventario.
 
     Iniciamos un span
     """
-    #with tracer.start_as_current_span("Get /items/all", kind=SpanKind.SERVER) as span:
-    with tracer.start_as_current_span("Get /items/all") as span:
+    # Extraer el contexto de trazas de los encabezados HTTP
+    context = extract(request.headers)
+    tracer = trace.get_tracer(__name__)
+    with tracer.start_as_current_span("Get /items/all", context=context) as span:
         # ------------------------------------------------------------------------------
         # Definimos un span child
         # ------------------------------------------------------------------------------
