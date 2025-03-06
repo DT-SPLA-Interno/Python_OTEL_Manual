@@ -43,6 +43,3 @@ Se obtiene un tracer de OpenTelemetry para el servicio `api-inventario` utilizan
 Se definen varios endpoints en FastAPI para interactuar con el servicio de API de inventario. Los endpoints incluyen:
 - `POST /items/add`: Agrega un ítem al inventario. Se inicia un span para rastrear la operación y se extrae el contexto de trazas de los encabezados HTTP.
 - `GET /items/all`: Retorna todos los ítems del inventario. Se inicia un span para rastrear la operación, se extrae el contexto de trazas de los encabezados HTTP y se define un span hijo para la consulta a la base de datos.
-
-
-```
